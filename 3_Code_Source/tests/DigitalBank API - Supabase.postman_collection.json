@@ -116,6 +116,40 @@
           "response": []
         },
         {
+          "name": "GET All Customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/accounts?select=*",
+              "host": [
+                "{{supabase_url}}"
+              ],
+              "path": [
+                "rest",
+                "v1",
+                "accounts"
+              ],
+              "query": [
+                {
+                  "key": "select",
+                  "value": "*"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "GET Account by ID",
           "request": {
             "method": "GET",
@@ -203,7 +237,7 @@
             "header": [
               {
                 "key": "apikey",
-                "value": "{{api_key}}"
+                "value": "{{anon_key}}"
               },
               {
                 "key": "Authorization",
@@ -233,32 +267,6 @@
                 "transactions"
               ]
             }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "04. Customers",
-      "item": [
-        {
-          "name": "GET My Customer (RLS)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "apikey",
-                "value": "{{api_key}}",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{supabase_url}}/rest/v1/customers?select=customer_id,email,first_name,last_name",
-            "description": "RLS: un customer doit voir uniquement sa ligne (liaison par email)."
           },
           "response": []
         }
