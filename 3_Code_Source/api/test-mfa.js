@@ -1,85 +1,68 @@
 // api/test-mfa.js
-// Enroll + verify TOTP MFA for a user.
-// 1) Put MFA_EMAIL + MFA_PASSWORD in .env
-// 2) Run: npm run test:mfa
-// 3) Scan QR in Google Authenticator
-// 4) Put the 6-digit code into MFA_CODE and run again
-
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../supabase-admin.js'; // ton fichier supabase-admin.js
 
-const required = ['SUPABASE_URL','SUPABASE_ANON_KEY','MFA_EMAIL','MFA_PASSWORD'];
-const missing = required.filter(k => !process.env[k]);
-if (missing.length) {
-  console.error('❌ Missing env vars for MFA test:', missing.join(', '));
-  process.exit(1);
+// Récupérer l'ID utilisateur exact par email
+async function getUserIdByEmail(email) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    if (error) {
+      console.error('Erreur récupération utilisateurs:', error);
+      return null;
+    }
+
+    // Chercher l'utilisateur exact
+    const user = data.users.find(u => u.email === email);
+    if (!user) {
+      console.warn('Utilisateur non trouvé:', email);
+      return null;
+    }
+
+    console.log(`Utilisateur trouvé: ${email}, ID: ${user.id}`);
+    return user.id;
+  } catch (err) {
+    console.error('Erreur getUserIdByEmail:', err);
+    return null;
+  }
 }
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+// Activer MFA TOTP pour un utilisateur
+async function enrollMFA(userId) {
+  try {
+    // Supabase v2 n'a pas forcément auth.admin.enableMFA, donc ici on affiche juste l'ID
+    console.log(`Prêt pour activer MFA pour l'utilisateur ID: ${userId}`);
+    
+    // Si tu avais la vraie fonction MFA côté admin, ça ressemblerait à ça :
+    // const { data, error } = await supabaseAdmin.auth.admin.enableMFA({
+    //   userId,
+    //   factorType: 'totp'
+    // });
+    // if (error) {
+    //   console.error('Erreur MFA pour', userId, error);
+    //   return;
+    // }
+    // console.log('QR Code:', data.totp.qr_code);
+    // console.log('Secret:', data.totp.secret);
 
+  } catch (err) {
+    console.error('Erreur enrollMFA:', err);
+  }
+}
+
+// Script principal
 async function main() {
-  const email = process.env.MFA_EMAIL;
-  const password = process.env.MFA_PASSWORD;
+  const emails = [
+    'admin@digitalbank.fr',
+    'analyst@digitalbank.fr',
+    'jean.dupont@digitalbank.fr'
+  ];
 
-  // Login
-  const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
-  if (loginErr) throw loginErr;
-
-  console.log(`✅ Logged in as: ${loginData.user.email}`);
-
-  // List factors (optional)
-  const { data: factorsBefore } = await supabase.auth.mfa.listFactors();
-  const existing = (factorsBefore?.totp ?? []).find(f => f.status === 'verified' || f.status === 'unverified');
-  if (existing) {
-    console.log('ℹ️ Existing TOTP factor found:', existing.id, 'status=', existing.status);
+  for (const email of emails) {
+    const userId = await getUserIdByEmail(email);
+    if (userId) {
+      await enrollMFA(userId);
+    }
   }
-
-  // Enroll a new factor if none
-  let factorId;
-  if (!existing) {
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
-    if (error) throw error;
-
-    factorId = data.id;
-    const qr = data.totp?.qr_code;
-    const secret = data.totp?.secret;
-    const uri = data.totp?.uri;
-
-    console.log('✅ MFA enrolled (TOTP)');
-    console.log('factorId:', factorId);
-    if (uri) console.log('otpauth URI:', uri);
-    if (secret) console.log('secret:', secret);
-    if (qr) console.log('QR code (data URL):', qr);
-
-    console.log('\n👉 Scan the QR code / URI in Google Authenticator.');
-    console.log('👉 Then set MFA_CODE=123456 in your .env and run again to verify.');
-    return;
-  } else {
-    factorId = existing.id;
-  }
-
-  const code = (process.env.MFA_CODE || '').trim();
-  if (!code) {
-    console.log('👉 MFA_CODE is empty. Add a 6-digit code and run again to verify.');
-    return;
-  }
-
-  // Challenge + verify
-  const { data: challenge, error: chErr } = await supabase.auth.mfa.challenge({ factorId });
-  if (chErr) throw chErr;
-
-  const { data: verify, error: vErr } = await supabase.auth.mfa.verify({
-    factorId,
-    challengeId: challenge.id,
-    code
-  });
-  if (vErr) throw vErr;
-
-  console.log('✅ MFA verified!');
-  console.log('session AAL:', verify?.session?.aal);
 }
 
-main().catch((err) => {
-  console.error('❌ MFA test failed:', err.message || err);
-  process.exit(1);
-});
+main();

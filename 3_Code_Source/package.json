@@ -1,16 +1,13 @@
 {
-  "name": "digitalbank-supabase-api-tests",
+  "name": "3_code_source",
   "version": "1.0.0",
-  "private": true,
+  "main": "api/test-mfa.js",
   "type": "module",
   "scripts": {
-    "test:api": "node api/test-api.js",
-    "test:roles": "node api/test-roles.js",
-    "test:mfa": "node api/test-mfa.js",
-    "check:env": "node api/check-env.js"
+    "start": "node api/test-mfa.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.56.0",
-    "dotenv": "^16.6.0"
+    "@supabase/supabase-js": "^2.91.0",
+    "dotenv": "^17.2.3"
   }
 }

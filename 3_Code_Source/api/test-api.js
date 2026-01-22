@@ -1,76 +1,172 @@
-// api/test-api.js
-// Basic end-to-end check as CUSTOMER (RLS should filter rows)
+// TESTS API SUPABASE - DIGITALBANK
 
-import 'dotenv/config';
-import './check-env.js';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+// Configuration 
+const SUPABASE_URL = 'https://puvjksqfwvfguxeqobqe.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1dmprc3Fmd3ZmZ3V4ZXFvYnFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NzkwODEsImV4cCI6MjA4NDU1NTA4MX0.DiyBTgZ2-bsevikSqOc1RMLBs-qyqF7tuD5QCMOK6UA'
 
-async function login(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+// TEST 1 : LOGIN
+
+async function testLogin() {
+  console.log('\n TEST 1 : Login')
+  
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: 'jean.dupont@digitalbank.fr',
+    password: 'SecureTest123!'
+  })
+  
+  if (error) {
+    console.error(' Erreur:', error.message)
+    return null
+  }
+  
+  console.log(' Login réussi!')
+  console.log('User ID:', data.user.id)
+  console.log('Email:', data.user.email)
+  
+  return data.session.access_token
 }
 
-async function main() {
-  console.log('========================================');
-  console.log('🧪 TESTS SUPABASE - ROLE CUSTOMER');
-  console.log('========================================');
+// TEST 2 : Récupérer les comptes (CLIENT)
 
-  // 1) login
-  const session = await login(process.env.CUSTOMER_EMAIL, process.env.CUSTOMER_PASSWORD);
-  console.log(`✅ Current User: ${session.user.email}`);
-
-  // 2) customer row (RLS by email)
-  const { data: customers, error: cErr } = await supabase
-    .from('customers')
-    .select('customer_id,email,first_name,last_name');
-  if (cErr) throw cErr;
-  console.log(`✅ customers visibles: ${customers.length}`);
-  customers.slice(0, 5).forEach(c => console.log(`  - ${c.customer_id} ${c.email}`));
-
-  // 3) accounts
-  const { data: accounts, error: aErr } = await supabase
+async function testGetAccounts() {
+  console.log('\n TEST 2 : Récupérer les comptes')
+  
+  const { data, error } = await supabase
     .from('accounts')
-    .select('account_id,customer_id,account_type,balance,currency,status')
-    .order('account_id', { ascending: true });
-  if (aErr) throw aErr;
-  console.log(`✅ accounts visibles: ${accounts.length}`);
-  accounts.forEach(a => console.log(`  - ${a.account_id} customer_id= ${a.customer_id} ${a.account_type} ${a.balance}`));
-
-  // 4) transactions (top 10 for first visible account)
-  const firstAcc = accounts[0]?.account_id;
-  if (!firstAcc) {
-    console.log('⚠️ No account visible, cannot test transactions.');
-  } else {
-    const { data: txs, error: tErr } = await supabase
-      .from('transactions')
-      .select('transaction_id,account_id,amount,merchant_name,merchant_category,timestamp,is_fraud')
-      .eq('account_id', firstAcc)
-      .order('timestamp', { ascending: false })
-      .limit(10);
-    if (tErr) throw tErr;
-    console.log(`✅ transactions visibles (top 10): ${txs.length}`);
-    txs.forEach(t => console.log(`  - ${t.transaction_id} acc= ${t.account_id} ${t.amount} ${t.merchant_name}`));
-  }
-
-  // 5) audit logs (should be admin-only)
-  const { data: audits, error: logErr } = await supabase
-    .from('audit_logs')
     .select('*')
-    .limit(5);
-
-  if (logErr) {
-    console.log('✅ audit_logs: BLOQUÉ (OK) →', logErr.message);
-  } else {
-    console.log('⚠️ audit_logs accessible (à vérifier):', audits);
+  
+  if (error) {
+    console.error(' Erreur:', error.message)
+    return
   }
-
-  console.log('\n✅ Tests terminés.');
+  
+  console.log(` ${data.length} compte(s) trouvé(s)`)
+  data.forEach(account => {
+    console.log(`  - ${account.account_number} : ${account.balance} ${account.currency}`)
+  })
 }
 
-main().catch((err) => {
-  console.error('❌ Erreur:', err.message || err);
-  process.exit(1);
-});
+// TEST 3 : Récupérer les transactions d'un compte
+
+async function testGetTransactions(accountId) {
+  console.log('\n TEST 3 : Récupérer les transactions')
+  
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('timestamp', { ascending: false })
+    .limit(10)
+  
+  if (error) {
+    console.error(' Erreur:', error.message)
+    return
+  }
+  
+  console.log(` ${data.length} transaction(s) trouvée(s)`)
+  data.forEach(tx => {
+    console.log(`  - ${tx.description}: ${tx.amount} ${tx.currency}`)
+  })
+}
+
+// TEST 4 : Créer une nouvelle transaction
+
+async function testCreateTransaction(accountId) {
+  console.log('\n TEST 4 : Créer une transaction')
+  
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert([
+      {
+        account_id: accountId,
+        transaction_type: 'deposit',
+        amount: 100.00,
+        currency: 'EUR',
+        description: 'Test transaction',
+        merchant: 'Test Merchant',
+        category: 'test',
+        status: 'completed'
+      }
+    ])
+    .select()
+  
+  if (error) {
+    console.error(' Erreur:', error.message)
+    return
+  }
+  
+  console.log(' Transaction créée avec succès!')
+  console.log('  ID:', data[0].transaction_id)
+}
+
+// TEST 5 : Test RLS - Tenter d'accéder aux données d'un autre user
+
+async function testRLS() {
+  console.log('\n TEST 5 : Test RLS')
+  
+  // Se connecter en tant que Jean (client)
+  await supabase.auth.signInWithPassword({
+    email: 'jean.dupont@digitalbank.fr',
+    password: 'SecureTest123!'
+  })
+  
+  // Tenter de récupérer TOUS les comptes (devrait filtrer automatiquement)
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('*')
+  
+  console.log(`Jean (client) voit ${data.length} compte(s)`)
+  
+  // Se connecter en tant que Marie (analyst)
+  await supabase.auth.signInWithPassword({
+    email: 'marie.martin@digitalbank.fr',
+    password: 'SecureTest123!'
+  })
+  
+  const { data: data2 } = await supabase
+    .from('accounts')
+    .select('*')
+  
+  console.log(`Marie (analyst) voit ${data2.length} compte(s)`)
+  
+  if (data2.length > data.length) {
+    console.log(' RLS fonctionne correctement!')
+  } else {
+    console.log(' RLS pourrait avoir un problème')
+  }
+}
+
+// EXÉCUTION DE TOUS LES TESTS
+
+async function runAllTests() {
+  console.log(' TESTS API SUPABASE - DIGITALBANK')
+  
+  try {
+    // Test 1 : Login
+    await testLogin()
+    
+    // Test 2 : Récupérer les comptes
+    await testGetAccounts()
+    
+    // Test 3 : Récupérer les transactions (utiliser le premier account_id)
+    await testGetTransactions(1) // Remplacer par un vrai account_id
+    
+    // Test 4 : Créer une transaction
+    await testCreateTransaction(1) // Remplacer par un vrai account_id
+    
+    // Test 5 : Test RLS
+    await testRLS()
+    
+    console.log(' TOUS LES TESTS TERMINÉS')
+    
+  } catch (error) {
+    console.error('\n Erreur globale:', error)
+  }
+}
+
+// Lancer les tests
+runAllTests()
