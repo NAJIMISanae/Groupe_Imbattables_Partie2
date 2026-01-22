@@ -1,0 +1,18 @@
+groups:
+- name: system_alerts
+  rules:
+  - alert: HighCPUUsage
+    expr: avg(rate(node_cpu_seconds_total{mode!="idle"}[1m])) > 0.8
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      description: "CPU usage > 80%"
+
+  - alert: HighMemoryUsage
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.8
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      description: "RAM usage > 80%"
