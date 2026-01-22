@@ -51,7 +51,7 @@ La solution finale combine une base PostgreSQL restaurée, une API no‑code Sup
      transactions                 
    - logs anonymisés              
 
-│
+
 ▼
 
   Automatisations Make.com       
@@ -59,7 +59,7 @@ La solution finale combine une base PostgreSQL restaurée, une API no‑code Sup
   - Alertes sécurité            
   - Rapports quotidiens         
 
-│
+
 ▼
 
  Monitoring & Metrics            
