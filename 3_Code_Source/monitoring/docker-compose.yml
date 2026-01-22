@@ -42,6 +42,7 @@ services:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres_exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@host.docker.internal:5432/postgres?sslmode=disable"
+
     ports:
       - "9187:9187"
