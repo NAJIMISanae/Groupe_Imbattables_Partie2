@@ -27,48 +27,46 @@ La solution finale combine une base PostgreSQL restaurée, une API no‑code Sup
 --- 
 
 ##  Architecture Technique
-┌──────────────────────────────┐
-│        Utilisateurs           │
-│  (Admin / Analyste / Client)  │
-└───────────────┬──────────────┘
+
+        Utilisateurs           
+  (Admin / Analyste / Client)  
+
+▼
+     Front End BI
+      Power BI  
+
+
+▼
+
+     API Layer (Supabase)     
+  - Auth (JWT, OAuth)              
+  - Row Level Security (RLS)       
+  - REST & Realtime API            
+
+
+▼
+
+   PostgreSQL restauré (pgAdmin) 
+   - clients, comptes, cartes    
+     transactions                 
+   - logs anonymisés              
+
 │
 ▼
-┌────────────────────────┐
-│     Frontend BI        │
-│       Power BI  │
-└──────────────┬─────────┘
+
+  Automatisations Make.com       
+  - Alertes fraude              
+  - Alertes sécurité            
+  - Rapports quotidiens         
+
 │
 ▼
-┌──────────────────────────────────┐
-│          API Layer (Supabase)     │
-│  - Auth (JWT, OAuth)              │
-│  - Row Level Security (RLS)       │
-│  - REST & Realtime API            │
-└──────────────────┬────────────────┘
-│
-▼
-┌────────────────────────────────┐
-│   PostgreSQL restauré (pgAdmin) │
-│   - clients, comptes, cartes    │
-│   - transactions                 │
-│   - logs anonymisés              │
-└────────────────────────────────┘
-│
-▼
-┌────────────────────────────────┐
-│   Automatisations Make.com       │
-│   - Alertes fraude              │
-│   - Alertes sécurité            │
-│   - Rapports quotidiens         │
-└────────────────────────────────┘
-│
-▼
-┌────────────────────────────────┐
-│ Monitoring & Metrics            │
-│ Prometheus + Grafana            │
-│ - CPU / RAM / API latency       │
-│ - Erreurs / requêtes / alertes  │
-└────────────────────────────────┘
+
+ Monitoring & Metrics            
+ Prometheus + Grafana            
+ CPU / RAM / API latency       
+ - Erreurs / requêtes / alertes  
+
 
 ---
 
